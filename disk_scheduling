@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Scheduling Algorithm</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            width: 50%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, select, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+        }
+        .track {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 10px;
+        }
+        .cylinder {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin: 5px;
+            line-height: 50px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        canvas {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Disk Scheduling Algorithm</h2>
+        <label>Enter Cylinder Requests (comma-separated):</label>
+        <input type="text" id="requests" placeholder="e.g., 98,183,37,122">
+        <label>Initial Head Position:</label>
+        <input type="number" id="head" placeholder="e.g., 53">
+        <label>Choose Algorithm:</label>
+        <select id="algorithm">
+            <option value="FCFS">FCFS</option>
+            <option value="SSTF">SSTF</option>
+            <option value="SCAN">SCAN</option>
+            <option value="C-SCAN">C-SCAN</option>
+        </select>
+        <button onclick="runDiskScheduling()">Run</button>
+        <div class="output">
+            <h3>Head Movement Visualization</h3>
+            <div id="visualization" class="track"></div>
+            <p id="movement"></p>
+            <canvas id="chart"></canvas>
+        </div>
+    </div>
+    <script>
+        function runDiskScheduling() {
+            let requests = document.getElementById("requests").value.split(",").map(Number);
+            let head = parseInt(document.getElementById("head").value);
+            let algorithm = document.getElementById("algorithm").value;
+            let sequence = [head];
+            let totalMovement = 0;
+
+            if (algorithm === "FCFS") {
+                for (let i = 0; i < requests.length; i++) {
+                    totalMovement += Math.abs(requests[i] - head);
+                    head = requests[i];
+                    sequence.push(head);
+                }
+            } else if (algorithm === "SSTF") {
+                while (requests.length) {
+                    requests.sort((a, b) => Math.abs(a - head) - Math.abs(b - head));
+                    let next = requests.shift();
+                    totalMovement += Math.abs(next - head);
+                    head = next;
+                    sequence.push(head);
+                }
+            } else if (algorithm === "SCAN") {
+                requests.push(0, 199); 
+                requests.sort((a, b) => a - b);
+                let index = requests.findIndex(val => val >= head);
+                sequence = sequence.concat(requests.slice(index).concat(requests.slice(0, index).reverse()));
+                for (let i = 1; i < sequence.length; i++) {
+                    totalMovement += Math.abs(sequence[i] - sequence[i - 1]);
+                }
+            } else if (algorithm === "C-SCAN") {
+                requests.push(0, 199);
+                requests.sort((a, b) => a - b);
+                let index = requests.findIndex(val => val >= head);
+                sequence = sequence.concat(requests.slice(index).concat(requests.slice(0, index)));
+                for (let i = 1; i < sequence.length; i++) {
+                    totalMovement += Math.abs(sequence[i] - sequence[i - 1]);
+                }
+            }
+
+            visualize(sequence);
+            plotGraph(sequence);
+            document.getElementById("movement").innerText = "Total Head Movement: " + totalMovement;
+        }
+
+        function visualize(sequence) {
+            let container = document.getElementById("visualization");
+            container.innerHTML = "";
+            sequence.forEach(pos => {
+                let div = document.createElement("div");
+                div.className = "cylinder";
+                div.innerText = pos;
+                container.appendChild(div);
+            });
+        }
+
+        function plotGraph(sequence) {
+            let ctx = document.getElementById("chart").getContext("2d");
+            if (window.diskChart) {
+                window.diskChart.destroy();
+            }
+            window.diskChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: sequence.map((_, i) => i),
+                    datasets: [{
+                        label: "Disk Head Movement",
+                        data: sequence,
+                        borderColor: "blue",
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { title: { display: true, text: "Cylinder Number" } },
+                        x: { title: { display: true, text: "Sequence" } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
