@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSTF Disk Scheduling</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { border: 1px solid black; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Disk Scheduling - SSTF</h2>
+    
+    <label for="queue">Enter request queue (comma-separated):</label>
+    <input type="text" id="queue" placeholder="98,183,37,122,14,124,65,67">
+    <br><br>
+    
+    <label for="head">Enter initial head position:</label>
+    <input type="number" id="head" placeholder="53">
+    <br><br>
+    
+    <button onclick="runSSTF()">Run SSTF</button>
+    
+    <h3>Output:</h3>
+    <p id="result"></p>
+    
+    <canvas id="chartCanvas" width="500" height="300"></canvas>
+
+    <script>
+        function runSSTF() {
+            let queue = document.getElementById("queue").value.split(',').map(Number);
+            let head = parseInt(document.getElementById("head").value);
+            let totalMovements = 0;
+            let order = [head];
+
+            while (queue.length > 0) {
+                let nearestIndex = findNearestRequest(queue, head);
+                let nearestRequest = queue[nearestIndex];
+
+                totalMovements += Math.abs(nearestRequest - head);
+                head = nearestRequest;
+                order.push(head);
+                
+                queue.splice(nearestIndex, 1); // Remove the processed request
+            }
+
+            document.getElementById("result").innerText = 
+                `Total head movements: ${totalMovements}\nOrder: ${order.join(" → ")}`;
+
+            drawGraph(order);
+        }
+
+        function findNearestRequest(queue, head) {
+            let minDistance = Infinity;
+            let nearestIndex = -1;
+            
+            for (let i = 0; i < queue.length; i++) {
+                let distance = Math.abs(queue[i] - head);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+            return nearestIndex;
+        }
+
+        function drawGraph(order) {
+            let canvas = document.getElementById("chartCanvas");
+            let ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+
+            let stepX = 400 / (order.length - 1);
+            let stepY = 200 / Math.max(...order);
+
+            for (let i = 0; i < order.length; i++) {
+                let x = 50 + i * stepX;
+                let y = 250 - order[i] * stepY;
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    </script>
+</body>
+</html>
